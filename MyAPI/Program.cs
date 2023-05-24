@@ -1,11 +1,26 @@
+using Microsoft.Extensions.Options;
+using MyAPI.Logging;
+using Serilog;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+//to log the instances in a log file (Serilog nuget package)
+//Log.Logger=new LoggerConfiguration().MinimumLevel.Debug().WriteTo
+//    .File("log/myApilogs.txt",rollingInterval:RollingInterval.Day).CreateLogger();
 
-builder.Services.AddControllers();
+//builder.Host.UseSerilog();
+
+builder.Services.AddControllers(/*Options=>*/
+//{ Options.ReturnHttpNotAcceptable = true; }
+).AddNewtonsoftJson().AddXmlDataContractSerializerFormatters();
+
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+//to add our custom logging in the container [different types for different periods(singleton, scoped, transient)]
+builder.Services.AddSingleton<ILogging, Loggingv2>();
 
 var app = builder.Build();
 
