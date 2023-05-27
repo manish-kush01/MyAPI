@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using MyAPI.Data;
 using MyAPI.Logging;
 using MyAPI.Models;
@@ -14,6 +15,7 @@ namespace MyAPI.Controllers
     //the APIController allows to process the validations placed in Models
     public class VillaController : ControllerBase
     {
+
         //using logger to log in console or file
         //private readonly ILogger<VillaController> _logger;
 
@@ -21,20 +23,27 @@ namespace MyAPI.Controllers
         //{
         //    _logger = logger;
         //}
-        private readonly ILogging _logger;
-        public VillaController(ILogging logger)
+        //private readonly ILogging _logger;
+        //public VillaController(ILogging logger)
+        //{
+        //    _logger = logger;
+        //}
+
+        private readonly ApplicationDbContext _db;
+        public VillaController(ApplicationDbContext db)
         {
-            _logger = logger;
+            _db = db;
         }
+
 
         [HttpGet]
         [ProducesResponseType(200)]
         public ActionResult<IEnumerable<VillaDto>> GetVillas() 
         {
             //_logger.LogInformation("Getting all villas"); // this will log in console
-            _logger.Log("Getting all villas","");
-            return Ok(VillaStore.villalist);
-
+            //_logger.Log("Getting all villas","");
+            //return Ok(VillaStore.villalist);
+            return Ok(_db.Villas);
         }
 
 
@@ -44,10 +53,11 @@ namespace MyAPI.Controllers
         //[ProducesResponseType(StatusCodes.Status404NotFound), Type= typeof(VillaDto)]
         public ActionResult GetVilla(int id)
         {
-            var villa = VillaStore.villalist.FirstOrDefault(n => n.Id == id);
+            //var villa = VillaStore.villalist.FirstOrDefault(n => n.Id == id);
+            var villa= _db.Villas.ToList().FirstOrDefault(n=> n.Id==id);
             if(villa == null)
             {
-                _logger.Log("getting error -"+id, "error");
+                //_logger.Log("getting error -"+id, "error");
                 return NotFound();
             }
             return Ok(villa);
@@ -65,7 +75,7 @@ namespace MyAPI.Controllers
             //{
             //    return BadRequest();
             //}
-            if(VillaStore.villalist.FirstOrDefault(n=>n.Name.ToLower() == villa.Name.ToLower())!= null)
+            if(_db.Villas.FirstOrDefault(n=>n.Name.ToLower() == villa.Name.ToLower())!= null)
             {
                 ModelState.AddModelError("Name", "Villa already exists");
                 return BadRequest(ModelState);
@@ -78,8 +88,18 @@ namespace MyAPI.Controllers
             {
                 return StatusCode(StatusCodes.Status500InternalServerError);
             }
-            villa.Id= VillaStore.villalist.OrderByDescending(n => n.Id).FirstOrDefault().Id+1;
-            VillaStore.villalist.Add(villa);
+            Villa model = new()
+            {
+                Name = villa.Name,
+                Id = villa.Id,
+                Description = villa.Description,
+                Rate = villa.Rate,
+                ImageUrl = villa.ImageUrl,
+                PinCode = villa.PinCode
+
+            };
+            _db.Villas.Add(model);
+            _db.SaveChanges();
             //return Ok(villa);
             return CreatedAtRoute(GetVilla(villa.Id),villa);
         }
@@ -91,10 +111,11 @@ namespace MyAPI.Controllers
 
         public IActionResult Delete(int id)
         {
-            var villa= VillaStore.villalist.FirstOrDefault(n=>n.Id==id);
+            var villa= _db.Villas.FirstOrDefault(n=>n.Id==id);
             if(villa != null)
             {
-                VillaStore.villalist.Remove(villa);
+                _db.Villas.Remove(villa);
+                _db.SaveChanges();
                 return NoContent();
             }
             else
@@ -114,9 +135,22 @@ namespace MyAPI.Controllers
             {
                 return BadRequest(ModelState);
             }
-            var villa = VillaStore.villalist.FirstOrDefault(n => n.Id == id);
-            villa.Name= villadto.Name;
-            villa.Description= villadto.Description;
+            //var villa = _db.Villas.FirstOrDefault(n => n.Id == id);
+            //villa.Name= villadto.Name;
+            //villa.Description= villadto.Description;
+
+            Villa model = new()
+            {
+                Name = villadto.Name,
+                Id = villadto.Id,
+                Description = villadto.Description,
+                Rate = villadto.Rate,
+                ImageUrl = villadto.ImageUrl,
+                PinCode = villadto.PinCode
+
+            };
+            _db.Villas.Update(model);
+            _db.SaveChanges();
             return NoContent();
         }
 
@@ -130,12 +164,36 @@ namespace MyAPI.Controllers
             {
                 return BadRequest(ModelState);
             }
-            var villa = VillaStore.villalist.FirstOrDefault(n => n.Id == id);
+            var villa = _db.Villas.AsNoTracking().FirstOrDefault(n => n.Id == id);
             if (villa == null)
             {
                 return BadRequest(ModelState);
             }
-            patchvilladto.ApplyTo(villa, ModelState);
+            VillaDto villaDto = new()
+            {
+                Name = villa.Name,
+                Id = villa.Id,
+                Description = villa.Description,
+                Rate = villa.Rate,
+                ImageUrl = villa.ImageUrl,
+                PinCode = villa.PinCode
+
+            };
+
+
+            patchvilladto.ApplyTo(villaDto, ModelState);
+            Villa model = new()
+            {
+                Name = villaDto.Name,
+                Id = villaDto.Id,
+                Description = villaDto.Description,
+                Rate = villaDto.Rate,
+                ImageUrl = villaDto.ImageUrl,
+                PinCode = villaDto.PinCode
+
+            };
+            _db.Villas.Update(model);
+            _db.SaveChanges();
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);

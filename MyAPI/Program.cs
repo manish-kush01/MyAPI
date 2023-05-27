@@ -1,4 +1,6 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using MyAPI.Data;
 using MyAPI.Logging;
 using Serilog;
 
@@ -14,6 +16,12 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers(/*Options=>*/
 //{ Options.ReturnHttpNotAcceptable = true; }
 ).AddNewtonsoftJson().AddXmlDataContractSerializerFormatters();
+
+//Entityframework using to connect to DB (registering dependency injection)
+builder.Services.AddDbContext<ApplicationDbContext>(option =>
+{
+    option.UseSqlServer(builder.Configuration.GetConnectionString("DefaultSQLConnection"));
+});
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
